@@ -374,7 +374,12 @@ public class CreateGame extends AppCompatActivity implements AsyncClass.CreateGa
     }
 
     // Inner AsyncTask class for creating a game
-    // Todo: Move to dedicated class (For cleanliness and reusability)
+
+
+
+
+
+
 
     private static class CreateGameTask extends AsyncTask<Void, Void, String> {
 
@@ -391,6 +396,7 @@ public class CreateGame extends AppCompatActivity implements AsyncClass.CreateGa
             this.mapId = mapId;
             this.gameLength = gameLength;
             this.listener = listener;
+
         }
 
         @Override

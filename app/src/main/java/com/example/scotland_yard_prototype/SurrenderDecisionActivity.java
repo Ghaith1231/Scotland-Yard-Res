@@ -1,21 +1,23 @@
 package com.example.scotland_yard_prototype;
 
-import androidx.appcompat.app.AppCompatActivity;
-import android.os.Bundle;
 import android.content.Intent;
+import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import org.json.JSONObject;
 
 public class SurrenderDecisionActivity extends AppCompatActivity
-        implements AsyncClass.RemoveFromGameTaskListener {
+        implements AsyncClass.BroadcastGameOverTaskListener {
 
     private Button yesButton, noButton;
-    private int playerId;
-    private String role;
+
+    private int playerId = -1;
+    private String role = null;
+    private int gameId = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,48 +25,52 @@ public class SurrenderDecisionActivity extends AppCompatActivity
         setContentView(R.layout.activity_surrender_decision);
 
         yesButton = findViewById(R.id.yesButton);
-        noButton  = findViewById(R.id.noButton);
+        noButton = findViewById(R.id.noButton);
+        noButton.setOnClickListener(v -> finish());
 
-        // ✅ Java method calls (no named args)
-        playerId = getIntent().getIntExtra("playerId", -1);
-        role     = getIntent().getStringExtra("playerRole");
 
-        yesButton.setOnClickListener(new View.OnClickListener() {
 
-            @Override public void onClick(View v) {
-                if ("Fugitive".equalsIgnoreCase(role)) {
-                    yesButton.setEnabled(false); // prevent double-tap
-                    // ✅ Run the remove here, listener is THIS activity
-                    new AsyncClass.RemoveFromGameTask(playerId, SurrenderDecisionActivity.this).execute();
-                } else {
-                    Toast.makeText(SurrenderDecisionActivity.this,
-                            "You cannot surrender as this role!", Toast.LENGTH_SHORT).show();
-                }
+        Intent src = getIntent();
+        if (src != null) {
+            playerId = src.getIntExtra("playerId", -1);
+            role = src.getStringExtra("playerRole");
+            gameId = src.getIntExtra("gameId", -1);
+        }
+
+
+
+        yesButton.setOnClickListener(v -> {
+            if (playerId == -1 || role == null || gameId == -1) {
+                Toast.makeText(this, "Missing player/game info.", Toast.LENGTH_SHORT).show();
+                return;
             }
-        });
 
-        noButton.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                finish(); // just go back to the game
-            }
+            yesButton.setEnabled(false);
+
+            new AsyncClass.BroadcastGameOverTask(
+                    gameId,
+                    "Detectives",
+                    "SURRENDER",
+                    playerId,
+                    SurrenderDecisionActivity.this
+            ).execute();
         });
     }
 
-    // ===== RemoveFromGameTaskListener =====
     @Override
-    public void onRemoveFromGameTaskCompleted(JSONObject jsonResponse) {
-        Log.d("SurrenderDecision", "Remove success: " + jsonResponse);
-        // Mr X surrendered -> show LoserScreen for this client
-        Intent i = new Intent(this, LoserScreen.class)
-                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+    public void onBroadcastGameOverTaskCompleted(JSONObject jsonResponse) {
+        Log.d("SurrenderDecision", "Broadcast success: " + (jsonResponse != null ? jsonResponse.toString() : "null"));
+        Intent i = new Intent(this, WinnerScreen.class);
+        i.putExtra("gameWinner", "DETECTIVES");
         startActivity(i);
         finish();
     }
 
     @Override
-    public void onRemoveFromGameTaskError(String errorMessage) {
-        yesButton.setEnabled(true);
-        Log.e("SurrenderDecision", "Remove error: " + errorMessage);
-        Toast.makeText(this, "Surrender failed: " + errorMessage, Toast.LENGTH_SHORT).show();
+    public void onBroadcastGameOverTaskError(String errorMessage) {
+        Log.e("SurrenderDecision", "Broadcast error: " + errorMessage);
+        if (yesButton != null) yesButton.setEnabled(true);
+        Toast.makeText(this, "Failed to surrender: " + (errorMessage == null ? "Unknown error" : errorMessage), Toast.LENGTH_SHORT).show();
     }
+
 }

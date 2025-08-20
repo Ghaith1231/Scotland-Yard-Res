@@ -68,6 +68,26 @@ public class NetworkRequests {
 
     }
 
+    public static String broadcastGameOver(int gameId, String winner, String reason, int surrenderedPlayerId) {
+        // Persist exactly what the polling client expects to read
+        String jsonData = "{\n" +
+                "  \"state\": \"Closed\",\n" +                 // <— ensure game is closed
+                "  \"winner\": \"" + winner + "\",\n" +       // e.g., "Detectives"
+                "  \"end_reason\": \"" + reason + "\",\n" +   // e.g., "SURRENDER"
+                "  \"surrenderedPlayerId\": " + surrenderedPlayerId + "\n" +
+                "}";
+
+        String requestURL = baseServerURL + "/" + gamesEndpoint + "/" + gameId;
+
+        Log.d("NetworkRequests", "broadcastGameOver URL: " + requestURL);
+        Log.d("NetworkRequests", "broadcastGameOver Body: " + jsonData);
+
+        return makePostRequest(requestURL, jsonData);
+    }
+
+
+
+
     public static Bitmap downloadImage(String urlString){
 
         HttpURLConnection connection = null;
@@ -335,6 +355,8 @@ public class NetworkRequests {
         // Makes the GET request to the endpoint using generic GET request method.
         return makeGetRequest(requestURL);
     }
+
+
 
     /**
      * Returns the current status of a given player

@@ -67,6 +67,8 @@ public class GameLobby extends AppCompatActivity implements AsyncClass.GetGameSt
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
+
+
         });
 
         gameNameDisplay = findViewById(R.id.gameNameDisplay);

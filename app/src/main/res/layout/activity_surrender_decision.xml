@@ -7,8 +7,7 @@
     android:layout_height="match_parent"
     android:background="@color/cardview_dark_background"
     android:visibility="visible">
-    
-    <!-- Image (Optional) -->
+
     <ImageView
         android:id="@+id/surrenderImage"
         android:layout_width="300dp"

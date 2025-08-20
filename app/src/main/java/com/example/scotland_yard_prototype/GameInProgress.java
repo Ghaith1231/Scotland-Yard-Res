@@ -22,7 +22,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-
+import android.os.Handler;
+import android.os.Looper;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -32,8 +33,26 @@ import java.util.List;
 
 public class GameInProgress extends AppCompatActivity implements AsyncClass.GetMapSingleTaskListener, AsyncClass.GetImageTaskListener, AsyncClass.PlayerMakeMoveTaskListener, AsyncClass.GetGameStateTaskListener, AsyncClass.GetPlayerStatusTaskListener, AsyncClass.RemoveFromGameTaskListener{
 
+
+
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private boolean alreadyExited = false;
+
+
+    private final Runnable pollGameState = new Runnable() {
+        @Override public void run() {
+            if (alreadyExited) return;
+            if (gameId == -1) {                  // no game yet? try again shortly
+                handler.postDelayed(this, 2000);
+                return;
+            }
+            new AsyncClass.GetGameStateTask(gameId, GameInProgress.this).execute();
+            handler.postDelayed(this, 2000);     // simple heartbeat
+        }
+    };
+
     // Handler/runnable instances for polling/running functions periodically
-    private Handler handler = new Handler();
+
     private Runnable runnable;
 
     private FrameLayout mapDisplayFrame; //= findViewById(R.id.mapFrameLayout);
@@ -74,12 +93,17 @@ public class GameInProgress extends AppCompatActivity implements AsyncClass.GetM
     private TextView redTicketDisplay;
     private TextView blackTicketDisplay;
     private TextView x2TicketDisplay;
+    private int gameId;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_game_in_progress);
+        gameId = getIntent().getIntExtra("gameId", -1);
+        handler.post(pollGameState);
+        Log.d("GameInProgress", "Started polling gameId=" + gameId);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
 
 
@@ -87,14 +111,21 @@ public class GameInProgress extends AppCompatActivity implements AsyncClass.GetM
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
+
+
+
         });
+
+
 
 
 
         playerIds = new ArrayList<>();
 
-
         surrenderButton = findViewById(R.id.surrenderButton);
+        if (!"Fugitive".equalsIgnoreCase(playerData.getRole())) {
+            surrenderButton.setVisibility(View.GONE);
+        }
         surrenderButton.bringToFront();
         leaveGameButton = findViewById(R.id.leaveGameButton);
         mapDisplayFrame = findViewById(R.id.mapFrameLayout);
@@ -144,15 +175,26 @@ public class GameInProgress extends AppCompatActivity implements AsyncClass.GetM
         });
 
         surrenderButton.setOnClickListener(v -> {
-            String role = playerData.getRole(); // ONLY "Fugitive"
+            String role = playerData.getRole();       // "Fugitive"
+            int pid     = playerData.getPlayerId();
+            int gid     = playerData.getGameId();
+            if (gid ==-1) {
+                Toast.makeText(this,"no game id", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
             if ("Fugitive".equalsIgnoreCase(role)) {
+                if (gid == -1) {
+                    Toast.makeText(GameInProgress.this, "Missing gameId.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 Intent i = new Intent(GameInProgress.this, SurrenderDecisionActivity.class);
                 i.putExtra("playerRole", role);
-                i.putExtra("playerId", playerData.getPlayerId()); // still pass ID for actual removal later
+                i.putExtra("playerId", pid);
+                i.putExtra("gameId", gid);
                 startActivity(i);
             } else {
-                Toast.makeText(this, "Only the Fugitive can surrender!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(GameInProgress.this, "Only the Fugitive can surrender!", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -554,6 +596,8 @@ public class GameInProgress extends AppCompatActivity implements AsyncClass.GetM
 
     }
 
+
+
     private String getTicketForLocations(int location1, int location2){
         // Helper function to find the required ticket for travel between two locations
 
@@ -611,48 +655,23 @@ public class GameInProgress extends AppCompatActivity implements AsyncClass.GetM
 
     }
 
-    private void onGameEnd(String winnerType, JSONArray playersData){
 
-        JSONObject result = new JSONObject();
-        try {
-            JSONArray playerNameArray = new JSONArray();
 
-            if (winnerType.equals("fugitive")) {
-                // TODO: Extract 0th element of "playersData"
 
-                // Extract playerData of "Fugitive" player
-                JSONObject fugitiveData = playersData.getJSONObject(0);
-                String playerName = fugitiveData.getString("playerName");
-                playerNameArray.put(playerName);
 
-            } else {
-                // TODO: Extract all elements of "playersData" apart from the 0th
 
-                for (int i = 1; i < playersData.length(); i++){
-                    JSONObject detectiveData = playersData.getJSONObject(i);
-                    String playerName = detectiveData.getString("playerName");
-                    playerNameArray.put(playerName);
-                }
-            }
 
-            result.put("winner", winnerType);
-            result.put("playerNames", playerNameArray);
 
-            // TODO: Package "result" into intent and begin "winner screen" activity.
-
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-    }
 
     @Override
-    protected void onDestroy(){
+    protected void onDestroy() {
         super.onDestroy();
-        // Remove any pending posts of the runnable when the activity is destroyed.
-        // Hopefully this should prevent issues.
-        handler.removeCallbacks(runnable);
+        if (pollGameState != null) handler.removeCallbacks(pollGameState);
+        if (runnable != null)      handler.removeCallbacks(runnable);
     }
+
+
+
 
     @Override
     protected void onPause() {
@@ -842,76 +861,31 @@ public class GameInProgress extends AppCompatActivity implements AsyncClass.GetM
     }
 
     @Override
-    public void onGetGameStateTaskCompleted(JSONObject jsonResponse){
+    public void onGetGameStateTaskCompleted(JSONObject jsonResponse) {
+        try {
+            if (jsonResponse == null) return;
+            if (jsonResponse.has("data")) {
+                JSONObject jsonData = new JSONObject(jsonResponse.getString("data"));
 
-        try{
+                // Test plz work
+                Log.d("GameInProgress", "Poll snapshot: " + jsonData.toString());
 
-            if (jsonResponse.has("data")){
-                // Get "data" component
-                String dataString = jsonResponse.getString("data");
-
-                // Parse "data" back into JSONObject
-                JSONObject jsonData = new JSONObject(dataString);
-                Log.d("GameInProgress", jsonData.toString());
-
-                JSONArray players = jsonData.getJSONArray("players");
-
-                populateKickDialog(players);
-
-                // Check whether win condition has been met
-                String gameWinner = jsonData.getString("winner");
-                Log.d("GameInProgress", "GAME WINNER IS: " + gameWinner);
-                if (!gameWinner.equals("None")){
-                    // TODO: End Game
-                    //JSONArray playersData = jsonData.getJSONArray("players");
-                    //onGameEnd(gameWinner, playersData);
-
-                    Intent winnerIntent = new Intent(GameInProgress.this, WinnerScreen.class);
-
-                    // Bundle containing "winner" string
-                    Bundle bundle = new Bundle();
-                    bundle.putString("gameWinner", gameWinner);
-                    winnerIntent.putExtras(bundle);
-                    startActivity(winnerIntent);
-                }else {
-
-                    playerNameDisplay.setText(playerData.getPlayerName());
-                    gameNameDisplay.setText(playerData.getGameName());
-                    gameStateDisplay.setText(jsonData.getString("state"));
-                    String roundText = (jsonData.getInt("round") + "/" + jsonData.getInt("length"));
-
-                    if (!gameRoundDisplay.getText().toString().equals(roundText)) {
-                        movedThisRound = false;
-                        gameRoundDisplay.setText(roundText);
-                    }
-
-                    gameRoundDisplay.setText(roundText);
-
-                    // Display player information
-                    new AsyncClass.GetPlayerStatusTask(playerData.getPlayerId(), GameInProgress.this).execute();
-
-
-                    JSONArray playersData = jsonData.getJSONArray("players");
-                    Log.d("GameInProgress", "Players Data: " + playersData.toString());
-
-
-                    //drawPlayers(playersData);
-                    handler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            // Perform background operations here if needed
-                            drawPlayers(playersData);  // This will run on the UI thread
-                        }
-                    });
+                String winner = jsonData.optString("winner", "None");
+                if (!"None".equalsIgnoreCase(winner)) {
+                    Log.d("GameInProgress", "Winner detected via poll: " + winner);
+                    routeToWinnerScreen(winner);
+                    return;
                 }
+
             }
-
-        } catch(JSONException e){
-            Log.d("GameInProgress", "OnGetMapSingleTask Failed");
-            e.printStackTrace();
+        } catch (Exception e) {
+            Log.e("GameInProgress", "onGetGameStateTaskCompleted parse error: " + e.getMessage());
         }
-
     }
+
+
+
+
 
     @Override
     public void onGetGameStateTaskError(String errorMessage){
@@ -964,11 +938,23 @@ public class GameInProgress extends AppCompatActivity implements AsyncClass.GetM
         finish();
     }
 
+
+
     @Override
     public void onRemoveFromGameTaskError(String errorMessage) {
         Log.e("GameInProgress", "Surrender failed: " + errorMessage);
         Toast.makeText(this, "Surrender failed: " + errorMessage, Toast.LENGTH_SHORT).show();
     }
 
+    private void routeToWinnerScreen(String winner) {
+        try {
+            if (handler != null && pollGameState != null) handler.removeCallbacks(pollGameState);
+        } catch (Exception ignored) {}
+        Intent i = new Intent(this, WinnerScreen.class);
+        i.putExtra("gameWinner", winner);
+        startActivity(i);
+        finish();
+    }
 
 }
+

@@ -1,10 +1,13 @@
 package com.example.scotland_yard_prototype;
 
 
+import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.AsyncTask;
 import android.util.Log;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -31,6 +34,11 @@ public class AsyncClass {
         void onGetMapsTaskError(String errorMessage);
     }
 
+
+
+
+
+
     // Get single map information Task Listener
     public interface GetMapSingleTaskListener {
         void onGetMapSingleTaskCompleted(JSONObject jsonResponse);
@@ -44,6 +52,8 @@ public class AsyncClass {
 
         void onGetGameStateTaskError(String errorMessage);
     }
+
+
 
     // Get Player Status Listener
     public interface GetPlayerStatusTaskListener {
@@ -101,12 +111,67 @@ public class AsyncClass {
         void onStartGameTaskError(String errorMessage);
     }
 
+    // POST: Broadcast game over (surrender) to server
+    public static class BroadcastGameOverTask extends android.os.AsyncTask<Void, Void, String> {
+
+        private final int gameId;
+        private final String winner;
+        private final String reason;
+        private final int surrenderedPlayerId;
+        private final BroadcastGameOverTaskListener listener;
+
+        public BroadcastGameOverTask(int gameId,
+                                     String winner,
+                                     String reason,
+                                     int surrenderedPlayerId,
+                                     BroadcastGameOverTaskListener listener) {
+                                    this.gameId = gameId;
+                                      this.winner = winner;
+                                          this.reason = reason;
+                                               this.surrenderedPlayerId = surrenderedPlayerId;
+                                           this.listener = listener;
+        }
+
+        @Override
+        protected String doInBackground(Void... voids) {
+            // Calls your NetworkRequests method
+            return NetworkRequests.broadcastGameOver(gameId, winner, reason, surrenderedPlayerId);
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+            try {
+                if (result != null && !result.isEmpty()) {
+                    org.json.JSONObject jsonResponse = new org.json.JSONObject(result);
+                    if (listener != null) listener.onBroadcastGameOverTaskCompleted(jsonResponse);
+                } else {
+                    if (listener != null) listener.onBroadcastGameOverTaskError("Empty response.");
+                }
+            } catch (org.json.JSONException e) {
+                e.printStackTrace();
+                if (listener != null) listener.onBroadcastGameOverTaskError("JSON parse error.");
+            }
+        }
+    }
+
+
+
     // Remove Player From Game Task Listener
     public interface RemoveFromGameTaskListener {
         void onRemoveFromGameTaskCompleted(JSONObject jsonResponse);
 
         void onRemoveFromGameTaskError(String errorMessage);
     }
+
+
+    public interface BroadcastGameOverTaskListener {
+
+        void onBroadcastGameOverTaskCompleted(org.json.JSONObject jsonResponse);
+
+        void onBroadcastGameOverTaskError(String errorMessage);
+    }
+
 
 
 
@@ -276,6 +341,12 @@ public class AsyncClass {
 
     }
 
+
+
+
+
+
+
     public static class GetPlayerStatusTask extends AsyncTask<Void, Void, String> {
 
         // Member variables
@@ -320,6 +391,7 @@ public class AsyncClass {
         }
 
     }
+
 
     public static class GetPlayerMoveHistoryTask extends AsyncTask<Void, Void, String> {
 
@@ -580,6 +652,9 @@ public class AsyncClass {
         }
     }
 
+
+
+
     // DELETE tasks
 
     public static class RemoveFromGameTask extends AsyncTask<Void, Void, String> {
@@ -627,6 +702,4 @@ public class AsyncClass {
 
 
     }
-
-
-}
+    }

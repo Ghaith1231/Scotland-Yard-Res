@@ -1,10 +1,8 @@
-
 package com.example.scotland_yard_prototype;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -38,15 +36,12 @@ public class LoserScreen extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(LoserScreen.this, MainActivity.class);
-                startActivity(intent); // Starts the "Main Activity" activity
-
+                startActivity(intent);
             }
         });
 
-        // Retrieve intent that started this activity
+        // Retrieve intent extras
         Intent intent = getIntent();
-
-        // Get bundle of data
         Bundle bundle = intent.getExtras();
 
         if (bundle != null) {
@@ -55,16 +50,13 @@ public class LoserScreen extends AppCompatActivity {
 
             String loserDisplayText;
 
-            if (playerRole.equals("Fugitive")) {
-                loserDisplayText = "You've been defeated! The Detectives win!";
+            if ("Fugitive".equalsIgnoreCase(playerRole)) {
+                loserDisplayText = "You have surrendered! The Detectives win!";
             } else {
                 loserDisplayText = "You've been defeated! Fugitive has escaped!";
             }
 
             loserDisplay.setText(loserDisplayText);
-
         }
     }
-
-
 }
