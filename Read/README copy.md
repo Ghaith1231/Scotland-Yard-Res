@@ -57,7 +57,6 @@ Trello Link —>  https://trello.com/b/1KEfrtfK/group-project-nick
 Github Link —> https://github.com/Ghaith1231/Scotland-Yard-Res
 
 
-
 Presentation/Report
 
 Video Link —> https://youtu.be/DEKNDo-6sHc
