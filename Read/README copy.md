@@ -19,10 +19,14 @@ Option “Return to main menu”
 Setup Info
 
 https://github.com/Ghaith1231/Scotland-Yard-Res
+       
+
 
        2 open project 
 
        3 Download 
+
+       4 open Scotland-Yard-Prototype on Andriod studio
 
 Open JDK 24
 
@@ -56,9 +60,9 @@ Github Link —> https://github.com/Ghaith1231/Scotland-Yard-Res
 
 Presentation/Report
 
-Video Link —>
+Video Link —> https://youtu.be/DEKNDo-6sHc
 
-Report Link —>
+
 
 
 
