@@ -17,7 +17,7 @@ Option “Return to main menu”
 
 
 Setup Info
-How to Run:
+
 1. Go to the GitHub repo: https://github.com/Ghaith1231/Scotland-Yard-Res
 2. Download the project (ZIP or clone with Git)
 3. Open the Scotland-Yard-Prototype project in Android Studio
