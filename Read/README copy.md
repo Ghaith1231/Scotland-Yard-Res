@@ -17,22 +17,14 @@ Option “Return to main menu”
 
 
 Setup Info
+How to Run:
+1. Go to the GitHub repo: https://github.com/Ghaith1231/Scotland-Yard-Res
+2. Download the project (ZIP or clone with Git)
+3. Open the Scotland-Yard-Prototype project in Android Studio
+4. Use OpenJDK 24
+5. Set Android API level 16–36
+6. Build and Run the app
 
-https://github.com/Ghaith1231/Scotland-Yard-Res
-       
-
-
-       2 open project 
-
-       3 Download 
-
-       4 open Scotland-Yard-Prototype on Andriod studio
-
-Open JDK 24
-
-Android 16 36
-
-Run and Build
 
 
 
